@@ -52,8 +52,7 @@ Untuk generate data inventory db ke redis
 Untuk display data product
 
 
-Penjelasan API Lengkap : https://web.postman.co/documentation/12891880-3692cd37-cfb0-4819-8e8c-4af350287705/publish?workspaceId=bff1c502-636f-466e-87fa-f45651262d51
-
+Penjelasan API Lengkap : https://documenter.getpostman.com/view/12891880/TzzDJEYK
 
 ## **Task 2**
 
