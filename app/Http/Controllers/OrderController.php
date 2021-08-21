@@ -30,6 +30,8 @@ class OrderController extends Controller
             $dataCart = DB::table('cart_items')->where("cartID", $request->cartID)->get();
             $bulkOrderItems = [];
             foreach($dataCart as $cart){
+                
+                // Check flash product where stock status available 
                 $product = DB::table('flash_products')
                 ->where("id", $cart->productID)
                 ->where("flagStock", 1)
@@ -39,12 +41,18 @@ class OrderController extends Controller
                     $order['productID'] = $cart->productID;
                     $order['quantity'] = $cart->quantity;
                     $quantityReal = $product->quantity - $cart->quantity;
+                    
+                    // Check if quantity after lower than quantity threshold 
                     if ($quantityReal < $product->quantityThreshold){
                         return response()->json(['success' => false, 'message' => 'out of stock !', 'data' => new \stdClass()]); 
                     }
+
+                    // Check if quantity equals 0 then set stock status to "out of stock"
                     if ($quantityReal == $product->quantityThreshold){
                         DB::table('flash_products')->where("id", $cart->productID)->update(["flagStock"=> 0]);
                     }
+
+                    // Decreasing quantity stock
                     DB::table('flash_products')->where("id", $cart->productID)->decrement("quantity", $cart->quantity);
                     $order['price'] = $cart->price;
                     array_push($bulkOrderItems, $order);
@@ -74,6 +82,8 @@ class OrderController extends Controller
             $dataCart = DB::table('cart_items')->where("cartID", $request->cartID)->get();
             $bulkOrderItems = [];
             foreach($dataCart as $cart){
+
+                // Check validity product quantity in redis 
                 $isValidQty = $this->checkQuantityInRedis($cart->productID, $cart->quantity);
                 if (!$isValidQty){
                     return response()->json(['success' => false, 'message' => 'out of stock !', 'data' => new \stdClass()]); 
@@ -81,6 +91,8 @@ class OrderController extends Controller
                 $order['orderID'] = $orderID;
                 $order['productID'] = $cart->productID;
                 $order['quantity'] = $cart->quantity;
+
+                // Decreasing quantity stock
                 DB::table('flash_products')->where("id", $cart->productID)->decrement("quantity", $cart->quantity);
                 $order['price'] = $cart->price;
                 array_push($bulkOrderItems, $order);
@@ -97,9 +109,13 @@ class OrderController extends Controller
     public function checkQuantityInRedis($productID, $quantity){
         $quantityRedis = app('redis')->get("product_".$productID);
         $quantityRedisAfter = $quantityRedis - $quantity;
+
+        // Check if quantity lower than product quantity in redis 
         if ($quantityRedisAfter < 0){
             return false;
         }
+
+        // Check if quantity equals 0 then set stock status to "out of stock"
         if ($quantityRedisAfter == 0){
             DB::table('flash_products')->where("id", $productID)->update(["flagStock"=> 0]);
         }
